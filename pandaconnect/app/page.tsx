@@ -1,166 +1,86 @@
-"use client";
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Calendar, Image as ImageIcon, MessageSquareText, ShieldCheck, ArrowRight } from 'lucide-react';
 
-import {
-  Authenticated,
-  Unauthenticated,
-  useMutation,
-  useQuery,
-} from "convex/react";
-import { api } from "../convex/_generated/api";
-import Link from "next/link";
-import { SignUpButton } from "@clerk/nextjs";
-import { SignInButton } from "@clerk/nextjs";
-import { UserButton } from "@clerk/nextjs";
+const features = [
+  {
+    icon: <MessageSquareText className="w-8 h-8 text-green-600" />,
+    title: 'Instant Communication',
+    description: 'Send quick updates and messages to parents securely and in real time.',
+  },
+  {
+    icon: <ImageIcon className="w-8 h-8 text-green-600" />,
+    title: 'Classroom Gallery',
+    description: 'Share classroom moments with image uploads parents can view anytime.',
+  },
+  {
+    icon: <Calendar className="w-8 h-8 text-green-600" />,
+    title: 'Events & Reminders',
+    description: 'Keep everyone on the same page with scheduled events and important notices.',
+  },
+  {
+    icon: <ShieldCheck className="w-8 h-8 text-green-600" />,
+    title: 'Secure & Private',
+    description: 'All communication is protected with enterprise-level security',
+  },
+];
 
-export default function Home() {
-  return (
-    <>
-      <header className="sticky top-0 z-10 bg-background p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-        Convex + Next.js + Clerk
-        <UserButton />
-      </header>
-      <main className="p-8 flex flex-col gap-8">
-        <h1 className="text-4xl font-bold text-center">
-          Convex + Next.js + Clerk
-        </h1>
-        <Authenticated>
-          <Content />
-        </Authenticated>
-        <Unauthenticated>
-          <SignInForm />
-        </Unauthenticated>
-      </main>
-    </>
-  );
-}
+export default async function Home() {
+  const { userId } = await auth();
 
-function SignInForm() {
-  return (
-    <div className="flex flex-col gap-8 w-96 mx-auto">
-      <p>Log in to see the numbers</p>
-      <SignInButton mode="modal">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">
-          Sign in
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal">
-        <button className="bg-foreground text-background px-4 py-2 rounded-md">
-          Sign up
-        </button>
-      </SignUpButton>
-    </div>
-  );
-}
-
-function Content() {
-  const { viewer, numbers } =
-    useQuery(api.myFunctions.listNumbers, {
-      count: 10,
-    }) ?? {};
-  const addNumber = useMutation(api.myFunctions.addNumber);
-
-  if (viewer === undefined || numbers === undefined) {
-    return (
-      <div className="mx-auto">
-        <p>loading... (consider a loading skeleton)</p>
-      </div>
-    );
+  if (userId) {
+    redirect('/dashboard');
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-lg mx-auto">
-      <p>Welcome {viewer ?? "Anonymous"}!</p>
-      <p>
-        Click the button below and open this page in another window - this data
-        is persisted in the Convex cloud database!
-      </p>
-      <p>
-        <button
-          className="bg-foreground text-background text-sm px-4 py-2 rounded-md"
-          onClick={() => {
-            void addNumber({ value: Math.floor(Math.random() * 10) });
-          }}
-        >
-          Add a random number
-        </button>
-      </p>
-      <p>
-        Numbers:{" "}
-        {numbers?.length === 0
-          ? "Click the button!"
-          : (numbers?.join(", ") ?? "...")}
-      </p>
-      <p>
-        Edit{" "}
-        <code className="text-sm font-bold font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded-md">
-          convex/myFunctions.ts
-        </code>{" "}
-        to change your backend
-      </p>
-      <p>
-        Edit{" "}
-        <code className="text-sm font-bold font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded-md">
-          app/page.tsx
-        </code>{" "}
-        to change your frontend
-      </p>
-      <p>
-        See the{" "}
-        <Link href="/server" className="underline hover:no-underline">
-          /server route
-        </Link>{" "}
-        for an example of loading data in a server component
-      </p>
-      <div className="flex flex-col">
-        <p className="text-lg font-bold">Useful resources:</p>
-        <div className="flex gap-2">
-          <div className="flex flex-col gap-2 w-1/2">
-            <ResourceCard
-              title="Convex docs"
-              description="Read comprehensive documentation for all Convex features."
-              href="https://docs.convex.dev/home"
-            />
-            <ResourceCard
-              title="Stack articles"
-              description="Learn about best practices, use cases, and more from a growing
-            collection of articles, videos, and walkthroughs."
-              href="https://www.typescriptlang.org/docs/handbook/2/basic-types.html"
-            />
-          </div>
-          <div className="flex flex-col gap-2 w-1/2">
-            <ResourceCard
-              title="Templates"
-              description="Browse our collection of templates to get started quickly."
-              href="https://www.convex.dev/templates"
-            />
-            <ResourceCard
-              title="Discord"
-              description="Join our developer community to ask questions, trade tips & tricks,
-            and show off your projects."
-              href="https://www.convex.dev/community"
-            />
+    <main className="min-h-screen bg-gradient-to-br from-gray-100 to-green-100">
+      {/* Hero Section */}
+      <section className="px-4 py-20 lg:px-8 lg:py-28 text-center">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <h1 className="text-5xl font-bold text-gray-900 leading-tight">
+            Empower Teachers.
+            <br />
+            <span className="bg-gradient-to-r from-green-600 to-teal-500 bg-clip-text text-transparent">
+              Engage Parents.
+            </span>
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            PandaConnect bridges communication between schools and families — all in one secure dashboard.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
+            <Button asChild size="lg" className="bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-lg">
+              <Link href="/sign-up" className="flex items-center gap-2">
+                Get Started
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="border-green-600 text-green-600 hover:bg-green-50 px-6 py-4 text-lg">
+              <Link href="/sign-in">Already Registered?</Link>
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
+      </section>
 
-function ResourceCard({
-  title,
-  description,
-  href,
-}: {
-  title: string;
-  description: string;
-  href: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2 bg-slate-200 dark:bg-slate-800 p-4 rounded-md h-28 overflow-auto">
-      <a href={href} className="text-sm underline hover:no-underline">
-        {title}
-      </a>
-      <p className="text-xs">{description}</p>
-    </div>
+      {/* Features Section */}
+      <section className="px-4 lg:px-8 py-20 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-4xl font-bold text-center text-gray-900 mb-12">Why PandaConnect?</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-10">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className="bg-white border border-green-100 p-6 rounded-xl shadow hover:shadow-md transition-shadow"
+              >
+                <div className="mb-4">{feature.icon}</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
