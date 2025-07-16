@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogFooter, AlertDialogTrigger,
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DataTable } from '@/components/ui/data-table';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useToast } from '@/components/ui/use-toast';
@@ -37,57 +37,119 @@ export default function StudentsPage() {
   const createStudent = useMutation(api.students.createStudent);
   const updateStudent = useMutation(api.students.updateStudent);
   const deleteStudent = useMutation(api.students.deleteStudent);
+  const ensureTeacherRecord = useMutation(api.students.ensureTeacherRecord);
   const { toast } = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<Id<"students"> | null>(null);
   const [form, setForm] = useState<FormState>({ name: '', parentEmails: '' });
   const [deleteId, setDeleteId] = useState<Id<"students"> | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Ensure teacher record exists when component loads
+  useEffect(() => {
+    ensureTeacherRecord().catch(console.error);
+  }, [ensureTeacherRecord]);
 
   const reset = () => {
     setForm({ name: '', parentEmails: '' });
     setEditingId(null);
+    setIsSubmitting(false);
   };
 
   const onSubmit = async () => {
-    const parentIds = form.parentEmails
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    if (editingId) {
-      await updateStudent({ 
-        studentId: editingId, 
-        name: form.name, 
-        parentIds,
-        pendingParentEmails: [],
-        classId: undefined
+    // Basic validation
+    if (!form.name.trim()) {
+      toast({ 
+        description: 'Student name is required.', 
+        variant: 'destructive' 
       });
-      toast({ description: 'Student updated.' });
-    } else {
-      await createStudent({ 
-        name: form.name, 
-        parentIds,
-        pendingParentEmails: [],
-        classId: undefined
-      });
-      toast({ description: 'Student added.' });
+      return;
     }
-    reset();
-    setIsOpen(false);
+
+    setIsSubmitting(true);
+
+    try {
+      // Split parent emails and convert to pending emails for now
+      // In a real app, you'd want to validate emails and potentially invite parents
+      const pendingParentEmails = form.parentEmails
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (editingId) {
+        // Find the current student to preserve existing parent IDs
+        const currentStudent = students.find(s => s._id === editingId);
+        
+        await updateStudent({ 
+          studentId: editingId, 
+          name: form.name.trim(), 
+          parentIds: currentStudent?.parentIds || [], // Keep existing linked parents
+          pendingParentEmails,
+          classId: currentStudent?.classId
+        });
+        toast({ description: 'Student updated successfully.' });
+      } else {
+        await createStudent({ 
+          name: form.name.trim(), 
+          parentIds: [], // Empty for new students until parents sign up
+          pendingParentEmails,
+          classId: undefined
+        });
+        toast({ description: 'Student added successfully.' });
+      }
+      reset();
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error saving student:', error);
+      toast({ 
+        description: 'Failed to save student. Please try again.', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const columns: ColumnDef<Student>[] = [
     {
       accessorKey: 'name',
-      header: 'Name',
+      header: 'Student Name',
     },
     {
       accessorKey: 'parentIds',
-      header: 'Parents',
+      header: 'Linked Parents',
       cell: ({ row }) => {
         const parentIds = row.getValue('parentIds') as string[];
-        return parentIds.length;
+        return (
+          <span className="text-sm">
+            {parentIds.length > 0 ? `${parentIds.length} linked` : 'None linked'}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'pendingParentEmails',
+      header: 'Pending Invites',
+      cell: ({ row }) => {
+        const pendingEmails = row.getValue('pendingParentEmails') as string[];
+        return (
+          <span className="text-sm">
+            {pendingEmails.length > 0 ? `${pendingEmails.length} pending` : 'None pending'}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created',
+      cell: ({ row }) => {
+        const createdAt = row.getValue('createdAt') as number;
+        return (
+          <span className="text-sm">
+            {new Date(createdAt).toLocaleDateString()}
+          </span>
+        );
       },
     },
     {
@@ -102,7 +164,10 @@ export default function StudentsPage() {
               size="sm"
               onClick={() => {
                 setEditingId(student._id);
-                setForm({ name: student.name, parentEmails: student.parentIds.join(',') });
+                setForm({ 
+                  name: student.name, 
+                  parentEmails: student.pendingParentEmails.join(', ') 
+                });
                 setIsOpen(true);
               }}
             >
@@ -117,7 +182,7 @@ export default function StudentsPage() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogTitle>Delete Student</AlertDialogTitle>
-                <p>Are you sure you want to delete this student?</p>
+                <p>Are you sure you want to delete &ldquo;{student.name}&rdquo;? This action cannot be undone.</p>
                 <AlertDialogFooter>
                   <Button variant="outline" onClick={() => setDeleteId(null)}>
                     Cancel
@@ -126,9 +191,17 @@ export default function StudentsPage() {
                     variant="destructive"
                     onClick={async () => {
                       if (deleteId) {
-                        await deleteStudent({ studentId: deleteId });
-                        toast({ description: 'Student deleted.' });
-                        setDeleteId(null);
+                        try {
+                          await deleteStudent({ studentId: deleteId });
+                          toast({ description: `${student.name} has been deleted.` });
+                          setDeleteId(null);
+                        } catch (error) {
+                          console.error('Error deleting student:', error);
+                          toast({ 
+                            description: 'Failed to delete student. Please try again.', 
+                            variant: 'destructive' 
+                          });
+                        }
                       }
                     }}
                   >
@@ -161,16 +234,26 @@ export default function StudentsPage() {
                 placeholder="Student Name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
               />
               <Input
-                placeholder="Comma-separated Parent Clerk IDs"
+                placeholder="Parent emails (comma-separated, e.g., parent1@email.com, parent2@email.com)"
                 value={form.parentEmails}
                 onChange={(e) => setForm({ ...form, parentEmails: e.target.value })}
+                type="email"
               />
+              <p className="text-sm text-gray-600">
+                Parent emails will be used to invite parents to join the platform.
+              </p>
             </div>
 
             <DialogFooter>
-              <Button onClick={onSubmit}>{editingId ? 'Save' : 'Create'}</Button>
+              <Button 
+                onClick={onSubmit} 
+                disabled={isSubmitting || !form.name.trim()}
+              >
+                {isSubmitting ? 'Saving...' : (editingId ? 'Save' : 'Create')}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

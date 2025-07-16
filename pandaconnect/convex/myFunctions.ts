@@ -6,7 +6,7 @@ import { api } from "./_generated/api";
 // See https://docs.convex.dev/functions for more.
 
 // You can read data from the database via a query:
-export const listNumbers = query({
+export const listUsers = query({
   // Validators for arguments.
   args: {
     count: v.number(),
@@ -16,23 +16,24 @@ export const listNumbers = query({
   handler: async (ctx, args) => {
     //// Read the database as many times as you need here.
     //// See https://docs.convex.dev/database/reading-data.
-    const numbers = await ctx.db
-      .query("numbers")
+    const users = await ctx.db
+      .query("users")
       // Ordered by _creationTime, return most recent
       .order("desc")
       .take(args.count);
     return {
       viewer: (await ctx.auth.getUserIdentity())?.name ?? null,
-      numbers: numbers.reverse().map((number) => number.value),
+      users: users.reverse().map((user) => user.name),
     };
   },
 });
 
 // You can write data to the database via a mutation:
-export const addNumber = mutation({
+export const addTestUser = mutation({
   // Validators for arguments.
   args: {
-    value: v.number(),
+    name: v.string(),
+    email: v.string(),
   },
 
   // Mutation implementation.
@@ -41,11 +42,16 @@ export const addNumber = mutation({
     //// Mutations can also read from the database like queries.
     //// See https://docs.convex.dev/database/writing-data.
 
-    const id = await ctx.db.insert("numbers", { value: args.value });
+    const id = await ctx.db.insert("users", { 
+      clerkId: `test_${Date.now()}`,
+      name: args.name,
+      email: args.email,
+      role: "parent" as const,
+      schoolId: "test_school"
+    });
 
-    console.log("Added new document with id:", id);
-    // Optionally, return a value from your mutation.
-    // return id;
+    console.log("Added new test user with id:", id);
+    return id;
   },
 });
 
@@ -53,26 +59,29 @@ export const addNumber = mutation({
 export const myAction = action({
   // Validators for arguments.
   args: {
-    first: v.number(),
-    second: v.string(),
+    count: v.number(),
   },
 
   // Action implementation.
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<string> => {
     //// Use the browser-like `fetch` API to send HTTP requests.
     //// See https://docs.convex.dev/functions/actions#calling-third-party-apis-and-using-npm-packages.
     // const response = await ctx.fetch("https://api.thirdpartyservice.com");
     // const data = await response.json();
 
     //// Query data by running Convex queries.
-    const data = await ctx.runQuery(api.myFunctions.listNumbers, {
-      count: 10,
+    const data = await ctx.runQuery(api.myFunctions.listUsers, {
+      count: args.count,
     });
     console.log(data);
 
     //// Write data by running Convex mutations.
-    await ctx.runMutation(api.myFunctions.addNumber, {
-      value: args.first,
-    });
+    // Example: Add a test user
+    // await ctx.runMutation(api.myFunctions.addTestUser, {
+    //   name: "Test User",
+    //   email: "test@example.com",
+    // });
+    
+    return `Processed ${data.users.length} users`;
   },
 });

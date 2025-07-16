@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Calendar, Image as ImageIcon, MessageSquareText, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Calendar, Image as ImageIcon, MessageSquareText, ShieldCheck, UserPlus, LogIn } from 'lucide-react';
 
 const features = [
   {
@@ -51,13 +51,16 @@ export default async function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
             <Button asChild size="lg" className="bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-lg">
-              <Link href="/sign-up" className="flex items-center gap-2">
+              <Link href="/sign-up" className="flex items-center">
+                <UserPlus className="w-5 h-5 mr-2" />
                 Get Started
-                <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="border-green-600 text-green-600 hover:bg-green-50 px-6 py-4 text-lg">
-              <Link href="/sign-in">Already Registered?</Link>
+              <Link href="/sign-in" className="flex items-center">
+                <LogIn className="w-5 h-5 mr-2" />
+                Sign In
+              </Link>
             </Button>
           </div>
         </div>
