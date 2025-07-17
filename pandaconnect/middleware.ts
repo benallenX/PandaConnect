@@ -1,10 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-// Define route matchers for different role-based routes
-const isAdminRoute = createRouteMatcher(['/dashboard/admin(.*)']);
-const isTeacherRoute = createRouteMatcher(['/dashboard/teacher(.*)']);
-const isParentRoute = createRouteMatcher(['/dashboard/parent(.*)']);
+// Define route matchers for protected routes
+const isTeacherRoute = createRouteMatcher(['/teacher(.*)']);
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
@@ -27,23 +25,26 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL('/sign-in', req.url));
   }
 
-  const role = sessionClaims?.metadata?.role as 'admin' | 'teacher' | 'parent' | undefined;
-
-  // Check admin routes
-  if (isAdminRoute(req) && role !== 'admin') {
-    return NextResponse.redirect(new URL('/unauthorized', req.url));
+  // Check teacher routes - only users with @apsk12.org can access
+  if (isTeacherRoute(req)) {
+    // Try to get email from sessionClaims - it might be in different formats
+    const claims = sessionClaims as Record<string, unknown>;
+    const userEmail = (claims?.email as string) || 
+                     (claims?.primary_email as string) || 
+                     (claims?.email_address as string) ||
+                     (claims?.emailAddresses as Array<{emailAddress: string}>)?.[0]?.emailAddress;
+    
+    if (!userEmail || typeof userEmail !== 'string') {
+      return NextResponse.redirect(new URL('/sign-in', req.url));
+    }
+    
+    // Check if user has @apsk12.org email
+    if (!userEmail.toLowerCase().includes('@apsk12.org')) {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
   }
 
-  // Check teacher routes (allow both teacher and admin)
-  if (isTeacherRoute(req) && !['teacher', 'admin'].includes(role ?? '')) {
-    return NextResponse.redirect(new URL('/unauthorized', req.url));
-  }
-
-  // Check parent routes
-  if (isParentRoute(req) && role !== 'parent') {
-    return NextResponse.redirect(new URL('/unauthorized', req.url));
-  }
-
+  // Allow access to all other routes
   return NextResponse.next();
 });
 

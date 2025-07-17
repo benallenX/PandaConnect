@@ -85,3 +85,103 @@ export const myAction = action({
     return `Processed ${data.users.length} users`;
   },
 });
+
+// ───────────────────────────────────────── LOGIN TRACKING FUNCTIONS
+
+// Log a user login event
+export const logLoginEvent = mutation({
+  args: {
+    clerkId: v.string(),
+    email: v.string(),
+    role: v.union(v.literal('admin'), v.literal('teacher'), v.literal('parent')),
+    schoolId: v.string(),
+    userAgent: v.optional(v.string()),
+    ipAddress: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const loginEventId = await ctx.db.insert("loginEvents", {
+      clerkId: args.clerkId,
+      email: args.email,
+      role: args.role,
+      schoolId: args.schoolId,
+      loginTime: Date.now(),
+      userAgent: args.userAgent,
+      ipAddress: args.ipAddress,
+    });
+
+    console.log(`Login event logged for ${args.email} (${args.role}) at ${new Date().toISOString()}`);
+    return loginEventId;
+  },
+});
+
+// Get recent login events (for admin dashboard)
+export const getRecentLogins = query({
+  args: {
+    schoolId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 50;
+    
+    const loginEvents = await ctx.db
+      .query("loginEvents")
+      .withIndex("by_schoolId", (q) => q.eq("schoolId", args.schoolId))
+      .order("desc")
+      .take(limit);
+
+    return loginEvents.map(event => ({
+      ...event,
+      loginTimeFormatted: new Date(event.loginTime).toLocaleString(),
+    }));
+  },
+});
+
+// Get login history for a specific user
+export const getUserLoginHistory = query({
+  args: {
+    clerkId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 20;
+    
+    const loginEvents = await ctx.db
+      .query("loginEvents")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .order("desc")
+      .take(limit);
+
+    return loginEvents.map(event => ({
+      ...event,
+      loginTimeFormatted: new Date(event.loginTime).toLocaleString(),
+    }));
+  },
+});
+
+// Get login stats (daily/weekly counts)
+export const getLoginStats = query({
+  args: {
+    schoolId: v.string(),
+    days: v.optional(v.number()), // how many days back to look
+  },
+  handler: async (ctx, args) => {
+    const days = args.days ?? 7;
+    const cutoffTime = Date.now() - (days * 24 * 60 * 60 * 1000);
+    
+    const recentLogins = await ctx.db
+      .query("loginEvents")
+      .withIndex("by_schoolId", (q) => q.eq("schoolId", args.schoolId))
+      .filter((q) => q.gte(q.field("loginTime"), cutoffTime))
+      .collect();
+
+    const stats = {
+      totalLogins: recentLogins.length,
+      uniqueUsers: new Set(recentLogins.map(event => event.clerkId)).size,
+      teacherLogins: recentLogins.filter(event => event.role === 'teacher').length,
+      parentLogins: recentLogins.filter(event => event.role === 'parent').length,
+      adminLogins: recentLogins.filter(event => event.role === 'admin').length,
+    };
+
+    return stats;
+  },
+});

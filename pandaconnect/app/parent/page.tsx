@@ -3,21 +3,13 @@ import { redirect } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Camera, MessageSquare, Calendar, User } from 'lucide-react';
+import { Camera, MessageSquare, Calendar, User, ArrowLeft } from 'lucide-react';
 
 export default async function ParentDashboard() {
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
 
   if (!userId) {
     redirect('/sign-in');
-  }
-
-  // Get user role from session claims
-  const role = sessionClaims?.metadata?.role as string;
-
-  // Redirect if not a parent
-  if (role && role !== 'parent') {
-    redirect('/dashboard');
   }
 
   return (
@@ -27,6 +19,12 @@ export default async function ParentDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
+              <Button asChild variant="ghost" size="sm" className="mr-4">
+                <Link href="/dashboard" className="flex items-center">
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  Admin Dashboard
+                </Link>
+              </Button>
               <h1 className="text-2xl font-bold text-green-600">PandaConnect</h1>
               <span className="ml-4 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
                 Parent Dashboard
@@ -49,7 +47,7 @@ export default async function ParentDashboard() {
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Button asChild className="h-auto p-6 bg-blue-600 hover:bg-blue-700">
-            <Link href="/dashboard/parent/photos" className="flex flex-col items-center text-center">
+            <Link href="/parent/photos" className="flex flex-col items-center text-center">
               <Camera className="w-8 h-8 mb-2" />
               <span className="text-lg font-medium">Photos</span>
               <span className="text-sm opacity-90">View classroom moments</span>
@@ -57,7 +55,7 @@ export default async function ParentDashboard() {
           </Button>
 
           <Button asChild variant="outline" className="h-auto p-6">
-            <Link href="/dashboard/parent/messages" className="flex flex-col items-center text-center">
+            <Link href="/parent/messages" className="flex flex-col items-center text-center">
               <MessageSquare className="w-8 h-8 mb-2" />
               <span className="text-lg font-medium">Messages</span>
               <span className="text-sm opacity-70">Chat with teachers</span>
@@ -65,7 +63,7 @@ export default async function ParentDashboard() {
           </Button>
 
           <Button asChild variant="outline" className="h-auto p-6">
-            <Link href="/dashboard/parent/schedule" className="flex flex-col items-center text-center">
+            <Link href="/parent/schedule" className="flex flex-col items-center text-center">
               <Calendar className="w-8 h-8 mb-2" />
               <span className="text-lg font-medium">Schedule</span>
               <span className="text-sm opacity-70">View activities</span>
@@ -73,7 +71,7 @@ export default async function ParentDashboard() {
           </Button>
 
           <Button asChild variant="outline" className="h-auto p-6">
-            <Link href="/dashboard/parent/profile" className="flex flex-col items-center text-center">
+            <Link href="/parent/profile" className="flex flex-col items-center text-center">
               <User className="w-8 h-8 mb-2" />
               <span className="text-lg font-medium">Profile</span>
               <span className="text-sm opacity-70">Child information</span>

@@ -80,4 +80,23 @@ export default defineSchema({
     .index('by_teacherId', ['teacherId'])
     .index('by_date', ['date'])
     .index('by_schoolId', ['schoolId']),
+
+  // ───────────────────────────────────────── login events
+  loginEvents: defineTable({
+    clerkId: v.string(),                        // user who logged in
+    email: v.string(),                          // user's email
+    role: v.union(
+      v.literal('admin'),
+      v.literal('teacher'),
+      v.literal('parent')
+    ),
+    schoolId: v.string(),                       // multi-tenant scope
+    loginTime: v.number(),                      // timestamp
+    userAgent: v.optional(v.string()),          // browser/device info
+    ipAddress: v.optional(v.string()),          // user's IP (if available)
+  })
+    .index('by_clerkId', ['clerkId'])
+    .index('by_schoolId', ['schoolId'])
+    .index('by_loginTime', ['loginTime'])
+    .index('by_role', ['role']),
 });

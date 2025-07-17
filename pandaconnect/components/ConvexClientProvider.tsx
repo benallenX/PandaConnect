@@ -4,7 +4,14 @@ import { ReactNode } from "react";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useAuth } from "@clerk/nextjs";
+import { useLoginTracking } from "@/hooks/useLoginTracking";
+
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+function LoginTracker() {
+  useLoginTracking();
+  return null;
+}
 
 export default function ConvexClientProvider({
   children,
@@ -13,6 +20,7 @@ export default function ConvexClientProvider({
 }) {
   return (
     <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <LoginTracker />
       {children}
     </ConvexProviderWithClerk>
   );
