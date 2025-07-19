@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { UserPlus, LogIn } from 'lucide-react';
+// import Link from 'next/link';
+// import { Button } from '@/components/ui/button';
+// import { UserPlus, LogIn } from 'lucide-react';
 
 export default function Home() {
 
@@ -12,7 +12,7 @@ export default function Home() {
           <h1 className="text-5xl font-bold text-gray-900 leading-tight">
             Empower Teachers.
             <br />
-            <span className="bg-gradient-to-r from-green-600 to-teal-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-green-500 to-gray-500 bg-clip-text text-transparent">
               Engage Parents.
             </span>
           </h1>
@@ -20,18 +20,18 @@ export default function Home() {
             PandaConnect bridges communication between schools and families — all in one secure dashboard.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button asChild size="lg" className="bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-lg">
+            {/* <Button asChild size="lg" className="bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-lg">
               <Link href="/sign-up" className="flex items-center">
                 <UserPlus className="w-5 h-5 mr-2" />
                 Get Started
               </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-green-600 text-green-600 hover:bg-green-50 px-6 py-4 text-lg">
+            </Button> */}
+            {/* <Button asChild variant="outline" size="lg" className="border-green-600 text-green-600 hover:bg-green-50 px-6 py-4 text-lg">
               <Link href="/sign-in" className="flex items-center">
                 <LogIn className="w-5 h-5 mr-2" />
                 Sign In
               </Link>
-            </Button>
+            </Button> */}
           </div>
         </div>
       </section>

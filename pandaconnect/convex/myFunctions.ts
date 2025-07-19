@@ -6,7 +6,7 @@ import { api } from "./_generated/api";
 // See https://docs.convex.dev/functions for more.
 
 // You can read data from the database via a query:
-export const listUsers = query({
+export const listNumbers = query({
   // Validators for arguments.
   args: {
     count: v.number(),
@@ -16,24 +16,23 @@ export const listUsers = query({
   handler: async (ctx, args) => {
     //// Read the database as many times as you need here.
     //// See https://docs.convex.dev/database/reading-data.
-    const users = await ctx.db
-      .query("users")
+    const numbers = await ctx.db
+      .query("numbers")
       // Ordered by _creationTime, return most recent
       .order("desc")
       .take(args.count);
     return {
       viewer: (await ctx.auth.getUserIdentity())?.name ?? null,
-      users: users.reverse().map((user) => user.name),
+      numbers: numbers.reverse().map((number) => number.value),
     };
   },
 });
 
 // You can write data to the database via a mutation:
-export const addTestUser = mutation({
+export const addNumber = mutation({
   // Validators for arguments.
   args: {
-    name: v.string(),
-    email: v.string(),
+    value: v.number(),
   },
 
   // Mutation implementation.
@@ -42,16 +41,11 @@ export const addTestUser = mutation({
     //// Mutations can also read from the database like queries.
     //// See https://docs.convex.dev/database/writing-data.
 
-    const id = await ctx.db.insert("users", { 
-      clerkId: `test_${Date.now()}`,
-      name: args.name,
-      email: args.email,
-      role: "parent" as const,
-      schoolId: "test_school"
-    });
+    const id = await ctx.db.insert("numbers", { value: args.value });
 
-    console.log("Added new test user with id:", id);
-    return id;
+    console.log("Added new document with id:", id);
+    // Optionally, return a value from your mutation.
+    // return id;
   },
 });
 
@@ -59,129 +53,26 @@ export const addTestUser = mutation({
 export const myAction = action({
   // Validators for arguments.
   args: {
-    count: v.number(),
+    first: v.number(),
+    second: v.string(),
   },
 
   // Action implementation.
-  handler: async (ctx, args): Promise<string> => {
+  handler: async (ctx, args) => {
     //// Use the browser-like `fetch` API to send HTTP requests.
     //// See https://docs.convex.dev/functions/actions#calling-third-party-apis-and-using-npm-packages.
     // const response = await ctx.fetch("https://api.thirdpartyservice.com");
     // const data = await response.json();
 
     //// Query data by running Convex queries.
-    const data = await ctx.runQuery(api.myFunctions.listUsers, {
-      count: args.count,
+    const data = await ctx.runQuery(api.myFunctions.listNumbers, {
+      count: 10,
     });
     console.log(data);
 
     //// Write data by running Convex mutations.
-    // Example: Add a test user
-    // await ctx.runMutation(api.myFunctions.addTestUser, {
-    //   name: "Test User",
-    //   email: "test@example.com",
-    // });
-    
-    return `Processed ${data.users.length} users`;
-  },
-});
-
-// ───────────────────────────────────────── LOGIN TRACKING FUNCTIONS
-
-// Log a user login event
-export const logLoginEvent = mutation({
-  args: {
-    clerkId: v.string(),
-    email: v.string(),
-    role: v.union(v.literal('admin'), v.literal('teacher'), v.literal('parent')),
-    schoolId: v.string(),
-    userAgent: v.optional(v.string()),
-    ipAddress: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const loginEventId = await ctx.db.insert("loginEvents", {
-      clerkId: args.clerkId,
-      email: args.email,
-      role: args.role,
-      schoolId: args.schoolId,
-      loginTime: Date.now(),
-      userAgent: args.userAgent,
-      ipAddress: args.ipAddress,
+    await ctx.runMutation(api.myFunctions.addNumber, {
+      value: args.first,
     });
-
-    console.log(`Login event logged for ${args.email} (${args.role}) at ${new Date().toISOString()}`);
-    return loginEventId;
-  },
-});
-
-// Get recent login events (for admin dashboard)
-export const getRecentLogins = query({
-  args: {
-    schoolId: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const limit = args.limit ?? 50;
-    
-    const loginEvents = await ctx.db
-      .query("loginEvents")
-      .withIndex("by_schoolId", (q) => q.eq("schoolId", args.schoolId))
-      .order("desc")
-      .take(limit);
-
-    return loginEvents.map(event => ({
-      ...event,
-      loginTimeFormatted: new Date(event.loginTime).toLocaleString(),
-    }));
-  },
-});
-
-// Get login history for a specific user
-export const getUserLoginHistory = query({
-  args: {
-    clerkId: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const limit = args.limit ?? 20;
-    
-    const loginEvents = await ctx.db
-      .query("loginEvents")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
-      .order("desc")
-      .take(limit);
-
-    return loginEvents.map(event => ({
-      ...event,
-      loginTimeFormatted: new Date(event.loginTime).toLocaleString(),
-    }));
-  },
-});
-
-// Get login stats (daily/weekly counts)
-export const getLoginStats = query({
-  args: {
-    schoolId: v.string(),
-    days: v.optional(v.number()), // how many days back to look
-  },
-  handler: async (ctx, args) => {
-    const days = args.days ?? 7;
-    const cutoffTime = Date.now() - (days * 24 * 60 * 60 * 1000);
-    
-    const recentLogins = await ctx.db
-      .query("loginEvents")
-      .withIndex("by_schoolId", (q) => q.eq("schoolId", args.schoolId))
-      .filter((q) => q.gte(q.field("loginTime"), cutoffTime))
-      .collect();
-
-    const stats = {
-      totalLogins: recentLogins.length,
-      uniqueUsers: new Set(recentLogins.map(event => event.clerkId)).size,
-      teacherLogins: recentLogins.filter(event => event.role === 'teacher').length,
-      parentLogins: recentLogins.filter(event => event.role === 'parent').length,
-      adminLogins: recentLogins.filter(event => event.role === 'admin').length,
-    };
-
-    return stats;
   },
 });

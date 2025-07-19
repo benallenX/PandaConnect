@@ -13,7 +13,7 @@ export default function NotFound() {
         {/* Logo */}
         <div className="flex justify-center mb-4">
           <Image
-            src="/logo.png"
+            src="/"
             alt="PandaConnect"
             width={100}
             height={100}
